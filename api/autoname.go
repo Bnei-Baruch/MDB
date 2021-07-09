@@ -167,6 +167,16 @@ func (d LessonPartDescriber) DescribeContentUnit(exec boil.Executor,
 				return nil, errors.Wrap(err, "Name by tag")
 			}
 			break
+		case "likutim":
+			if idx >= len(metadata.Likutim) {
+				log.Warnf("metadata.major index out of bounds got %d but only %d elements in likutim",
+					idx, len(metadata.Likutim))
+			}
+			names, err = nameByLikutimUID(exec, metadata.Likutim[idx])
+			if err != nil {
+				return nil, errors.Wrap(err, "Name by likutim")
+			}
+			break
 		default:
 			log.Warnf("Unknown metadata.major type %s", metadata.Major.Type)
 		}
@@ -841,6 +851,29 @@ func nameByTagUID(exec boil.Executor, uid string, cNumber *int) (map[string]stri
 			if i18n != nil && i18n.Label.Valid {
 				names[language] = i18n.Label.String
 			}
+		}
+	}
+
+	return names, nil
+}
+
+func nameByLikutimUID(exec boil.Executor, uid string) (map[string]string, error) {
+
+	// Load Likutim details from DB
+	cu, err := models.ContentUnits(exec, qm.Load("ContentUnitI18ns"), qm.Where("uid = ?", uid)).One()
+	if err != nil {
+		return nil, errors.Wrapf(err, "Find Unit in DB")
+	}
+
+	// create names
+	names := make(map[string]string)
+	if cu.R.ContentUnitI18ns == nil {
+		return names, nil
+	}
+
+	for _, i18n := range cu.R.ContentUnitI18ns {
+		if i18n.Name.Valid {
+			names[i18n.Language] = i18n.Name.String
 		}
 	}
 

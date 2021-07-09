@@ -337,3 +337,20 @@ func (suite *AutonameSuite) TestNameByTag() {
 	suite.Require().Nil(err)
 	suite.Len(names, 8, "len(names)")
 }
+
+func (suite *AutonameSuite) TestNameByLikutim() {
+	likutim, err := SomeLikutim(suite.tx)
+	suite.Require().Nil(err)
+
+	names, err := nameByLikutimUID(suite.tx, likutim[0].UID)
+	suite.Require().Nil(err)
+
+	var name null.String
+	for _, l := range likutim[0].R.ContentUnitI18ns {
+		if l.Language == common.LANG_HEBREW {
+			name = l.Name
+		}
+	}
+	suite.NotNil(name)
+	suite.Equal(name.String, names[common.LANG_HEBREW], "len(names)")
+}

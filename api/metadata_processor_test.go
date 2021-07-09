@@ -53,13 +53,18 @@ func TestMetadataProcessor(t *testing.T) {
 }
 
 func (suite *MetadataProcessorSuite) TestDailyLesson() {
-	chain := suite.simulateLessonChain()
+	likutim, err := SomeLikutim(suite.tx)
+	suite.Require().Nil(err)
+	likutimUIDs := make([]string, len(likutim))
+	for i, l := range likutim {
+		likutimUIDs[i] = l.UID
+	}
 
+	chain := suite.simulateLessonChain()
 	// send parts
 	// send full
 	// send kitei makor of part 1
 	// send ktaim nivcharim from full
-
 	metadata := CITMetadata{
 		ContentType:    common.CT_LESSON_PART,
 		AutoName:       "auto_name",
@@ -72,6 +77,7 @@ func (suite *MetadataProcessorSuite) TestDailyLesson() {
 		Part:           null.IntFrom(0),
 		Sources:        suite.someSources(),
 		Tags:           suite.someTags(),
+		Likutim:        likutimUIDs,
 		RequireTest:    false,
 	}
 	original, proxy := chain["part0"].Original, chain["part0"].Proxy
@@ -2268,6 +2274,23 @@ func (suite *MetadataProcessorSuite) assertContentUnit(metadata CITMetadata, ori
 		suite.False(missing, "Missing tag %s", x)
 	}
 
+	// likutim
+	likutim, err := models.ContentUnits(suite.tx,
+		qm.InnerJoin("content_unit_derivations cud ON cud.derived_id = \"content_units\".id"),
+		qm.Where("cud.source_id = ? AND \"content_units\".type_id = ? AND published IS TRUE", cu.ID, common.CONTENT_TYPE_REGISTRY.ByName[common.CT_LIKUTIM].ID)).All()
+	suite.Require().Nil(err)
+	suite.Equal(len(metadata.Likutim), len(likutim), "len(likutim)")
+	for _, x := range metadata.Likutim {
+		missing := true
+		for _, y := range likutim {
+			if x == y.UID {
+				missing = false
+				break
+			}
+		}
+		suite.False(missing, "Missing Likutim %s", x)
+	}
+
 	// persons
 	err = cu.L.LoadContentUnitsPersons(suite.tx, true, cu)
 	suite.Require().Nil(err)
@@ -2279,4 +2302,30 @@ func (suite *MetadataProcessorSuite) assertContentUnit(metadata CITMetadata, ori
 	} else {
 		suite.Empty(cu.R.ContentUnitsPersons, "Empty cu.R.ContentUnitsPersons")
 	}
+}
+
+func SomeLikutim(exec boil.Executor) ([]*models.ContentUnit, error) {
+	sources, err := models.Sources(exec, qm.Limit(1+rand.Intn(10))).All()
+	if err != nil {
+		return nil, err
+	}
+	likutim := make([]*models.ContentUnit, len(sources))
+	for i, s := range sources {
+		likutim[i] = &models.ContentUnit{
+			UID:       s.UID,
+			TypeID:    common.CONTENT_TYPE_REGISTRY.ByName[common.CT_LIKUTIM].ID,
+			Published: true,
+		}
+		err = likutim[i].Insert(exec)
+		if err != nil {
+			return nil, err
+		}
+
+		i18ns := []*models.ContentUnitI18n{{Language: common.LANG_HEBREW, Name: null.StringFrom("name")}}
+		err = likutim[i].AddContentUnitI18ns(exec, true, i18ns...)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return likutim, nil
 }

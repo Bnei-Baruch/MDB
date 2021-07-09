@@ -52,7 +52,7 @@ type (
 	}
 
 	CITMetadataMajor struct {
-		Type string `json:"type" binding:"omitempty,eq=source|eq=tag"`
+		Type string `json:"type" binding:"omitempty,eq=source|eq=tag|eq=likutim"`
 		Idx  int    `json:"idx" binding:"omitempty,gte=0"`
 	}
 	CITMetadata struct {
@@ -68,6 +68,7 @@ type (
 		Part           null.Int          `json:"part"`
 		Sources        []string          `json:"sources" binding:"omitempty,dive,len=8"`
 		Tags           []string          `json:"tags" binding:"omitempty,dive,len=8"`
+		Likutim        []string          `json:"likutims" binding:"omitempty,dive,len=8"`
 		ArtifactType   null.String       `json:"artifact_type"`
 		HasTranslation bool              `json:"has_translation"`
 		RequireTest    bool              `json:"require_test"`
