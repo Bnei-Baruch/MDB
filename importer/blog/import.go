@@ -96,7 +96,11 @@ func prepare(post *wordpress.Post) (*models.BlogPost, error) {
 	}
 	var sb strings.Builder
 
-	nodes, err := html.ParseFragment(strings.NewReader(post.Content.Rendered), &ctxNode)
+	content := post.Content.Rendered
+	if strings.Contains(content, "http://youtube") {
+		content = strings.ReplaceAll(content, "http://youtube", "https://youtube")
+	}
+	nodes, err := html.ParseFragment(strings.NewReader(content), &ctxNode)
 	if err != nil {
 		return nil, errors.Wrapf(err, "html.Parse %d", post.ID)
 	}
@@ -241,8 +245,12 @@ func cleanPost(post *models.BlogPost) error {
 		DataAtom: atom.Body,
 		Data:     "body",
 	}
+	content := post.Content
+	if strings.Contains(content, "http://youtube") {
+		content = strings.ReplaceAll(content, "http://youtube", "https://youtube")
+	}
 
-	nodes, err := html.ParseFragment(strings.NewReader(post.Content), &ctxNode)
+	nodes, err := html.ParseFragment(strings.NewReader(content), &ctxNode)
 	if err != nil {
 		return errors.Wrapf(err, "html.ParseFragment %d", post.ID)
 	}
